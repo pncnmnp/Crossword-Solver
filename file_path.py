@@ -1,0 +1,1 @@
+MOBY_PATH = "./corpus/moby_words.txt"
