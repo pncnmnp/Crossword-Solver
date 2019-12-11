@@ -1,9 +1,73 @@
 from nltk.corpus import wordnet as wn
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import gensim.downloader as api
 from file_path import *
+import pickle
+import string
 
 class Words():
 	def __init__(self):
 		pass
+
+	def fetch_all_word_vectors(self):
+		return api.load("glove-wiki-gigaword-100")
+
+	def store_all_word_vectors(self):
+		all_word_vectors = self.fetch_all_word_vectors()
+		with open(ALL_WORD_VECTOR_PATH, "wb") as fp:
+			pickle.dump(all_word_vectors, fp)
+
+	def retrieve_all_word_vectors(self):
+		try:
+			with open(ALL_WORD_VECTOR_PATH, "rb") as fp:
+				all_word_vectors = pickle.load(fp)
+			return all_word_vectors
+		except:
+			return None		
+
+	def sentence_solution(self, sentence_clues, clues):
+		"""ADD SIZES
+		"""
+		all_words_wordnet = wn.words()
+
+		word_vectors = self.retrieve_all_word_vectors()
+		if word_vectors == None:
+			self.store_all_word_vectors()
+			word_vectors = self.retrieve_all_word_vectors()
+
+		stop = stopwords.words('english') + list(string.punctuation)
+		clues_tokenized = dict()
+		clue_mapping = dict()
+
+
+		# Tokenize all the clues, removing stopwords and punctuations
+		for clue in sentence_clues:
+			tokenized = [word for word in word_tokenize(clue.lower()) if word not in stop]
+			clues_tokenized[clue] = tokenized
+
+		print("STARTING FETCH.....")
+		for word_wordnet in all_words_wordnet:
+			iter_val = len(wn.synsets(word_wordnet))
+
+			for syn_no in range(iter_val):
+				synset_tokenized = [word for word in word_tokenize(wn.synsets(word_wordnet)[syn_no].definition().lower()) if word not in stop]
+
+				for clue in sentence_clues:
+					if len(word_wordnet) != clues[clue]:
+						continue
+					try:
+						similarity = word_vectors.n_similarity(clues_tokenized[clue], synset_tokenized)
+						if similarity > 0.65:
+							try:
+								clue_mapping[clue] += [(word_wordnet, similarity)]
+							except:
+								clue_mapping[clue] = [(word_wordnet, similarity)]
+							clue_mapping[clue] = sorted(set(clue_mapping[clue]), key=lambda x: x[1], reverse=True)
+					except:
+						pass
+
+		return clue_mapping
 
 	def one_word_solution(self, one_word_clues, clues):
 		fp = open(MOBY_PATH)
@@ -32,7 +96,7 @@ class Words():
 					except:
 						clue_mapping[word] = guess_words
 
-					clue_mapping[word] = sorted(list(set(clue_mapping[word])))	
+					clue_mapping[word] = sorted(list(set(clue_mapping[word])))
 
 		return clue_mapping
 
@@ -56,8 +120,13 @@ class Words():
 		# converting words such as extra-large into large
 		one_word_clues += [clue.split("-")[-1].lower() for clue in all_clues 
 								if ("-" in clue) and (len(clue.split("-"))) == 2]
+		# one_word_solved = self.one_word_solution(one_word_clues, clues)
 
-		one_word_solved = self.one_word_solution(one_word_clues, clues)
+		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
+		sentence_solved = self.sentence_solution(sentence_clues, clues)
+
+		print(sentence_solved)
 
 if __name__ == '__main__':
-	Words().fetch_words({"Rescue": 4, "Outmoded": 5, "Bound": 6, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6})
+	# Words().fetch_words({"Rescue": 4, "Outmoded": 5, "Bound": 6, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6})
+	Words().fetch_words({"Russian liquor": 5, "Lebanese capital": 6})
