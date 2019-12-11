@@ -58,14 +58,25 @@ class Words():
 						continue
 					try:
 						similarity = word_vectors.n_similarity(clues_tokenized[clue], synset_tokenized)
-						if similarity > 0.65:
-							try:
-								clue_mapping[clue] += [(word_wordnet, similarity)]
-							except:
-								clue_mapping[clue] = [(word_wordnet, similarity)]
-							clue_mapping[clue] = sorted(set(clue_mapping[clue]), key=lambda x: x[1], reverse=True)
+					except KeyError as e:
+						try:
+							# This error is caused by word_vectors.n_similarity()
+							# The keyerror is printed as "word 'XXX' not in vocabulary"
+							# We are giving the prediction another chance by removing the KeyError word
+							try_removing_a_word = e.args[0].replace("word ", "").replace("not in vocabulary", "").replace("'", "").strip()
+							synset_tokenized.remove(try_removing_a_word)
+							similarity = word_vectors.n_similarity(clues_tokenized[clue], synset_tokenized)
+						except:
+							continue
 					except:
-						pass
+						continue
+
+					if similarity > 0.65:
+						try:
+							clue_mapping[clue] += [(word_wordnet, similarity)]
+						except:
+							clue_mapping[clue] = [(word_wordnet, similarity)]
+						clue_mapping[clue] = sorted(set(clue_mapping[clue]), key=lambda x: x[1], reverse=True)
 
 		return clue_mapping
 
@@ -125,8 +136,12 @@ class Words():
 		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
 		sentence_solved = self.sentence_solution(sentence_clues, clues)
 
+		# Print top 10 results
+		for clue in sentence_solved:
+			sentence_solved[clue] = sentence_solved[clue][:10]
+
 		print(sentence_solved)
 
 if __name__ == '__main__':
 	# Words().fetch_words({"Rescue": 4, "Outmoded": 5, "Bound": 6, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6})
-	Words().fetch_words({"Russian liquor": 5, "Lebanese capital": 6})
+	Words().fetch_words({"Russian liquor": 5, "Lebanese capital": 6, "Coiled fossil": 8, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6, "Opera composer": 7, "Young cat": 6, "Barnaby ___, Dickens novel": 5, "Fair-haired": 6})
