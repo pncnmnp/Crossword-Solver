@@ -1,10 +1,12 @@
 from nltk.corpus import wordnet as wn
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+from ast import literal_eval
 import gensim.downloader as api
 from file_path import *
 import pickle
 import string
+import requests
 
 class Words():
 	def __init__(self):
@@ -25,6 +27,31 @@ class Words():
 			return all_word_vectors
 		except:
 			return None		
+
+	def wikipedia_solution(self, wikipedia_clues, clues):
+		WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php?action=query&utf8=&format=json&list=search&srsearch="
+		stop = stopwords.words('english') + list(string.punctuation)
+		clue_mapping = dict()
+
+		for sentence in wikipedia_clues:
+			req = requests.get(WIKIPEDIA_API + sentence)
+			wiki_json = literal_eval(req.text)
+
+			# The following code finds all titles from the JSON response,
+			# The title is stripped of stop_words and punctuations
+			# The title is split by space
+			# Duplicates are removed and words are converted to a 1-D list
+			solutions = list(set([word for word in [[word for word in word_tokenize(info["title"].lower()) if word not in stop] for info in wiki_json["query"]["search"]] for word in word]))
+
+			for soln in solutions:
+				if len(soln) != clues[sentence]:
+					continue
+				try:
+					clue_mapping[sentence] += [soln]
+				except:
+					clue_mapping[sentence] = [soln]
+
+		return clue_mapping
 
 	def sentence_solution(self, sentence_clues, clues):
 		"""ADD SIZES
@@ -136,11 +163,16 @@ class Words():
 		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
 		sentence_solved = self.sentence_solution(sentence_clues, clues)
 
-		# Print top 10 results
+		wikipedia_clues = list()
+		# Print top 10 results 
+		# And identify clues which require a Wikipedia fetch
 		for clue in sentence_solved:
 			sentence_solved[clue] = sentence_solved[clue][:10]
+			if len(sentence_solved[clue]) < 10 or sentence_solved[clue][0][1] < 0.69:
+				wikipedia_clues.append(clue)
 
-		print(sentence_solved)
+		wikipedia_solved = self.wikipedia_solution(wikipedia_clues, clues)
+		print(wikipedia_solved)
 
 if __name__ == '__main__':
 	# Words().fetch_words({"Rescue": 4, "Outmoded": 5, "Bound": 6, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6})
