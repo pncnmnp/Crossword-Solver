@@ -7,6 +7,12 @@ from file_path import *
 import pickle
 import string
 import requests
+import inflect # Library used to check whether a sentence is singular or plural
+
+"""
+TODO: >> Plural detection and conversion [done]
+      >> Variable cutoff value
+"""
 
 class Words():
 	def __init__(self):
@@ -33,6 +39,7 @@ class Words():
 		stop = stopwords.words('english') + list(string.punctuation)
 		clue_mapping = dict()
 
+		print(">>> STARTING WIKI FETCH.....")
 		for sentence in wikipedia_clues:
 			req = requests.get(WIKIPEDIA_API + sentence)
 			wiki_json = literal_eval(req.text)
@@ -54,8 +61,6 @@ class Words():
 		return clue_mapping
 
 	def sentence_solution(self, sentence_clues, clues):
-		"""ADD SIZES
-		"""
 		all_words_wordnet = wn.words()
 
 		word_vectors = self.retrieve_all_word_vectors()
@@ -66,14 +71,22 @@ class Words():
 		stop = stopwords.words('english') + list(string.punctuation)
 		clues_tokenized = dict()
 		clue_mapping = dict()
-
+		
+		clue_plural = dict()
+		infl = inflect.engine()
 
 		# Tokenize all the clues, removing stopwords and punctuations
 		for clue in sentence_clues:
 			tokenized = [word for word in word_tokenize(clue.lower()) if word not in stop]
 			clues_tokenized[clue] = tokenized
 
-		print("STARTING FETCH.....")
+			# check if the clue is singular or plural
+			if infl.singular_noun(clue) == False:
+				clue_plural[clue] = "singular"
+			else:
+				clue_plural[clue] = "plural"
+
+		print(">>> STARTING LOCAL FETCH.....")
 		for word_wordnet in all_words_wordnet:
 			iter_val = len(wn.synsets(word_wordnet))
 
@@ -81,8 +94,19 @@ class Words():
 				synset_tokenized = [word for word in word_tokenize(wn.synsets(word_wordnet)[syn_no].definition().lower()) if word not in stop]
 
 				for clue in sentence_clues:
-					if len(word_wordnet) != clues[clue]:
-						continue
+					# To prevent any modifications on original variable
+					# Can be caused if the clue is in plural form, and word_wordnet gets converted to plural form
+					# This happens if length of the plural form of word matches with clue's required length
+					# Example: "Young mares" (PLURAL) (length - 7) -> filly -> fillies
+					temp_word_wordnet = word_wordnet
+
+					if len(temp_word_wordnet) != clues[clue]:
+						# Check if the plural form of the word is of same length as required by the crossword
+						if clue_plural[clue] == "plural" and len(infl.plural(temp_word_wordnet)) == clues[clue]:
+							temp_word_wordnet = infl.plural(temp_word_wordnet)
+						else:
+							continue
+
 					try:
 						similarity = word_vectors.n_similarity(clues_tokenized[clue], synset_tokenized)
 					except KeyError as e:
@@ -100,9 +124,9 @@ class Words():
 
 					if similarity > 0.65:
 						try:
-							clue_mapping[clue] += [(word_wordnet, similarity)]
+							clue_mapping[clue] += [(temp_word_wordnet, similarity)]
 						except:
-							clue_mapping[clue] = [(word_wordnet, similarity)]
+							clue_mapping[clue] = [(temp_word_wordnet, similarity)]
 						clue_mapping[clue] = sorted(set(clue_mapping[clue]), key=lambda x: x[1], reverse=True)
 
 		return clue_mapping
@@ -164,16 +188,14 @@ class Words():
 		sentence_solved = self.sentence_solution(sentence_clues, clues)
 
 		wikipedia_clues = list()
-		# Print top 10 results 
-		# And identify clues which require a Wikipedia fetch
+		# Print top N results
+		N = 30
 		for clue in sentence_solved:
-			sentence_solved[clue] = sentence_solved[clue][:10]
-			if len(sentence_solved[clue]) < 10 or sentence_solved[clue][0][1] < 0.69:
-				wikipedia_clues.append(clue)
+			sentence_solved[clue] = sentence_solved[clue][:N]
 
-		wikipedia_solved = self.wikipedia_solution(wikipedia_clues, clues)
+		wikipedia_solved = self.wikipedia_solution(sentence_clues, clues)
+		print(sentence_solved)
 		print(wikipedia_solved)
 
 if __name__ == '__main__':
-	# Words().fetch_words({"Rescue": 4, "Outmoded": 5, "Bound": 6, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6})
-	Words().fetch_words({"Russian liquor": 5, "Lebanese capital": 6, "Coiled fossil": 8, "Inflamed swelling on eyelid": 4, "Depth of six feet": 6, "Opera composer": 7, "Young cat": 6, "Barnaby ___, Dickens novel": 5, "Fair-haired": 6})
+	Words().fetch_words({"Gas essential for life": 6, "Casual trousers": 5, "Meryl __, film star": 6, "Broadcasting medium": 5, "Prepare for publication": 4, "Sicilian volcano": 4, "Spanish savoury snacks": 5, "University qualification": 6, "Long-haired sheepdog": 6, "Breed of cat": 7, "London rail terminus": 6, "Three score": 5, "Take delight in": 5})
