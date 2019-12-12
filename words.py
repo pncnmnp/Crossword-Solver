@@ -35,7 +35,7 @@ class Words():
 			return None		
 
 	def wikipedia_solution(self, wikipedia_clues, clues):
-		WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php?action=query&utf8=&format=json&list=search&srsearch="
+		WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php?action=query&utf8=&format=json&list=search&srlimit=50&srsearch="
 		stop = stopwords.words('english') + list(string.punctuation)
 		clue_mapping = dict()
 
@@ -86,7 +86,7 @@ class Words():
 			else:
 				clue_plural[clue] = "plural"
 
-		print(">>> STARTING LOCAL FETCH.....")
+		print(">>> STARTING SENTENCE LOCAL FETCH.....")
 		for word_wordnet in all_words_wordnet:
 			iter_val = len(wn.synsets(word_wordnet))
 
@@ -136,10 +136,17 @@ class Words():
 		moby_lines = fp.readlines()
 		clue_mapping = dict()
 
+		# Copy the contents of the 'clues' dict in a temp variable
+		# To prevent any modification changes appearing globally
+		temp_clues = dict()
+		for word in list(clues.keys()):
+			temp_clues[word] = clues[word]
+
+		print(">>> STARTING ONE-WORD LOCAL FETCH.....")
 		# splits and re-indexes clues such as 'extra-large' as 'large'
 		# this is done to maintain consistency with 'one_word_clues'
-		for word in clues:
-			clues[word.replace("-", " ").split()[-1].lower()] = clues.pop(word)
+		for word in list(temp_clues.keys()):
+			temp_clues[word.replace("-", " ").split()[-1].lower()] = temp_clues.pop(word)
 
 		for line in moby_lines:
 			guess_words = line.replace("\n", "").split(",")
@@ -152,7 +159,7 @@ class Words():
 				continue
 			else:
 				for word in common:
-					guess_words = [guess for guess in guess_words if len(guess)==clues[word]]
+					guess_words = [guess for guess in guess_words if len(guess)==temp_clues[word]]
 					try:
 						clue_mapping[word] += guess_words
 					except:
@@ -182,7 +189,8 @@ class Words():
 		# converting words such as extra-large into large
 		one_word_clues += [clue.split("-")[-1].lower() for clue in all_clues 
 								if ("-" in clue) and (len(clue.split("-"))) == 2]
-		# one_word_solved = self.one_word_solution(one_word_clues, clues)
+		one_word_solved = self.one_word_solution(one_word_clues, clues)
+		print(one_word_solved)
 
 		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
 		sentence_solved = self.sentence_solution(sentence_clues, clues)
@@ -192,10 +200,10 @@ class Words():
 		N = 30
 		for clue in sentence_solved:
 			sentence_solved[clue] = sentence_solved[clue][:N]
+		print(sentence_solved)
 
 		wikipedia_solved = self.wikipedia_solution(sentence_clues, clues)
-		print(sentence_solved)
 		print(wikipedia_solved)
 
 if __name__ == '__main__':
-	Words().fetch_words({"Gas essential for life": 6, "Casual trousers": 5, "Meryl __, film star": 6, "Broadcasting medium": 5, "Prepare for publication": 4, "Sicilian volcano": 4, "Spanish savoury snacks": 5, "University qualification": 6, "Long-haired sheepdog": 6, "Breed of cat": 7, "London rail terminus": 6, "Three score": 5, "Take delight in": 5})
+	Words().fetch_words({"Grumbles indistinctly": 7, "Dada co-founder Jean": 3, "Authentic": 7, "Sailor's direction": 3, "Mythical hominid-like creature": 7, "A Nightmare on __ Street (1984)": 3, "Soup bowls": 7, "Computer info quantity": 7, "Scarlet songbird": 7, "Edible fungus": 7, "Quintessence": 7, "Protective sword holders": 7})
