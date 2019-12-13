@@ -16,7 +16,10 @@ TODO: >> Plural detection and conversion [done]
 
 class Words():
 	def __init__(self):
-		pass
+		self.word_vectors = self.retrieve_all_word_vectors()
+		if self.word_vectors == None:
+			self.store_all_word_vectors()
+			self.word_vectors = self.retrieve_all_word_vectors()
 
 	def fetch_all_word_vectors(self):
 		return api.load("glove-wiki-gigaword-100")
@@ -63,10 +66,7 @@ class Words():
 	def sentence_solution(self, sentence_clues, clues):
 		all_words_wordnet = wn.words()
 
-		word_vectors = self.retrieve_all_word_vectors()
-		if word_vectors == None:
-			self.store_all_word_vectors()
-			word_vectors = self.retrieve_all_word_vectors()
+		word_vectors = self.word_vectors
 
 		stop = stopwords.words('english') + list(string.punctuation)
 		clues_tokenized = dict()
@@ -142,7 +142,7 @@ class Words():
 		for word in list(clues.keys()):
 			temp_clues[word] = clues[word]
 
-		print(">>> STARTING ONE-WORD LOCAL FETCH.....")
+		print(">>> STARTING ONE-WORD LOCAL FETCH (V.1).....")
 		# splits and re-indexes clues such as 'extra-large' as 'large'
 		# this is done to maintain consistency with 'one_word_clues'
 		for word in list(temp_clues.keys()):
@@ -169,6 +169,31 @@ class Words():
 
 		return clue_mapping
 
+	def one_word_solution_alternate(self, one_word_clues, clues):
+		clue_mapping = dict()
+		stop = stopwords.words('english') + list(string.punctuation)
+
+		# For common words, optimal is around 100, for proper nouns optimal is 1000-2000
+		topn = 100
+
+		# Copy the contents of the 'clues' dict in a temp variable
+		# To prevent any modification changes appearing globally
+		temp_clues = dict()
+		for word in list(clues.keys()):
+			temp_clues[word] = clues[word]
+
+		print(">>> STARTING ONE-WORD LOCAL FETCH (V.2).....")
+		# splits and re-indexes clues such as 'extra-large' as 'large'
+		# this is done to maintain consistency with 'one_word_clues'
+		for word in list(temp_clues.keys()):
+			temp_clues[word.replace("-", " ").split()[-1].lower()] = temp_clues.pop(word)
+
+		for clue in one_word_clues:
+			pos = [word for word in word_tokenize(clue.lower()) if word not in stop]
+			clue_mapping[clue] = [word[0] for word in self.word_vectors.most_similar(positive=pos, topn=topn) if len(word[0]) == temp_clues[clue]]
+
+		return clue_mapping
+
 	def fetch_words(self, clues):
 		"""	1. The tense of the clues have to be guessed
 		    2. We segregate the "one word" clues with "sentence" clues
@@ -189,7 +214,7 @@ class Words():
 		# converting words such as extra-large into large
 		one_word_clues += [clue.split("-")[-1].lower() for clue in all_clues 
 								if ("-" in clue) and (len(clue.split("-"))) == 2]
-		one_word_solved = self.one_word_solution(one_word_clues, clues)
+		one_word_solved = self.one_word_solution_alternate(one_word_clues, clues)
 		print(one_word_solved)
 
 		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
@@ -206,4 +231,4 @@ class Words():
 		print(wikipedia_solved)
 
 if __name__ == '__main__':
-	Words().fetch_words({"Grumbles indistinctly": 7, "Dada co-founder Jean": 3, "Authentic": 7, "Sailor's direction": 3, "Mythical hominid-like creature": 7, "A Nightmare on __ Street (1984)": 3, "Soup bowls": 7, "Computer info quantity": 7, "Scarlet songbird": 7, "Edible fungus": 7, "Quintessence": 7, "Protective sword holders": 7})
+	Words().fetch_words({"A type of cheese": 4, "Indian Grandmaster": 5, "A small european singing bird": 5, "A plant of the cabbage species": 8, "Director of Raging Bull": 8, "Fireplace": 7, "A popular game character created by Shigeru Miyamoto": 5, "Author who created Sherlock Holmes": 5, "The science of life": 7, "Used for baking or roasting": 4})
