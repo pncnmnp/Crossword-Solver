@@ -8,6 +8,7 @@ import pickle
 import string
 import requests
 import inflect # Library used to check whether a sentence is singular or plural
+import json
 
 """
 TODO: >> Plural detection and conversion [done]
@@ -63,8 +64,28 @@ class Words():
 
 		return clue_mapping
 
+	def reduce_search_bound(self, all_words_wordnet, sentence_clues, clues):
+		"""Reduces the search space by finding most similar words from self.word_vectors
+		   using the method 'most_similar'.
+		   Common words found between self.word_vectors.most_similar() and all_words_wordnet
+		   are returned.
+		   Param: all_words_wordnet : has to be wn.words()
+		                              where wn is wordnet from nltk.corpus
+		"""
+		words = list(all_words_wordnet)
+		possible_words = list()
+		stop = stopwords.words('english') + list(string.punctuation)
+		topn = 4000
+
+		for sentence in sentence_clues:
+			pos = [word for word in word_tokenize(sentence.lower()) if word not in stop]
+			search_words = [word[0] for word in self.word_vectors.most_similar(positive=pos, topn=topn) if len(word[0])==clues[sentence]]
+			possible_words += list(set(words).intersection(set(search_words)))
+
+		return sorted(list(set(possible_words)))
+
 	def sentence_solution(self, sentence_clues, clues):
-		all_words_wordnet = wn.words()
+		all_words_wordnet = self.reduce_search_bound(wn.words(), sentence_clues, clues)
 
 		word_vectors = self.word_vectors
 
@@ -194,6 +215,30 @@ class Words():
 
 		return clue_mapping
 
+	def store_words(self, one_word_solved, one_word_clues, sentence_solved, wikipedia_solved):
+		clues = dict()
+
+		for key in list(one_word_solved.keys()):
+			actual_key = [val[1] for val in one_word_clues if val[0]==key][0]
+			try:
+				clues[actual_key] += one_word_solved[key]
+			except:
+				clues[actual_key] = list()
+				clues[actual_key] += one_word_solved[key]
+
+		for key in list(sentence_solved.keys()):
+			try:
+				clues[key] += [word[0] for word in sentence_solved[key]]
+				clues[key] += wikipedia_solved[key]
+			except:
+				clues[key] = list()
+				clues[key] += [word[0] for word in sentence_solved[key]]
+				clues[key] += wikipedia_solved[key]
+
+		print(">>> STORED CLUES.....")
+		with open(STORE_CLUES_PATH, "w") as fp:
+			json.dump(str(clues), fp)
+
 	def fetch_words(self, clues):
 		"""	1. The tense of the clues have to be guessed
 		    2. We segregate the "one word" clues with "sentence" clues
@@ -209,26 +254,26 @@ class Words():
 		           {clue_1: word_len_1, clue_2: word_len_2}
 		"""
 		all_clues = list(clues.keys())
-		one_word_clues = [clue.lower() for clue in all_clues if len(clue.split(" ")) == 1]
+		one_word_clues = [(clue.lower(),clue) for clue in all_clues if len(clue.split(" ")) == 1]
 
 		# converting words such as extra-large into large
-		one_word_clues += [clue.split("-")[-1].lower() for clue in all_clues 
+		one_word_clues += [(clue.split("-")[-1].lower(),clue) for clue in all_clues 
 								if ("-" in clue) and (len(clue.split("-"))) == 2]
-		one_word_solved = self.one_word_solution_alternate(one_word_clues, clues)
-		print(one_word_solved)
+		one_word_solved = self.one_word_solution_alternate([clue[0] for clue in one_word_clues], clues)
 
 		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
 		sentence_solved = self.sentence_solution(sentence_clues, clues)
 
 		wikipedia_clues = list()
 		# Print top N results
-		N = 30
+		N = 40
 		for clue in sentence_solved:
 			sentence_solved[clue] = sentence_solved[clue][:N]
-		print(sentence_solved)
 
 		wikipedia_solved = self.wikipedia_solution(sentence_clues, clues)
-		print(wikipedia_solved)
+
+		self.store_words(one_word_solved, one_word_clues, sentence_solved, wikipedia_solved)
 
 if __name__ == '__main__':
+	# THE WORDS INSERTED SHOULD HAVE THEIR STARTING LETTER CAPITALIZED
 	Words().fetch_words({"A type of cheese": 4, "Indian Grandmaster": 5, "A small european singing bird": 5, "A plant of the cabbage species": 8, "Director of Raging Bull": 8, "Fireplace": 7, "A popular game character created by Shigeru Miyamoto": 5, "Author who created Sherlock Holmes": 5, "The science of life": 7, "Used for baking or roasting": 4})
