@@ -1,4 +1,5 @@
 from ast import literal_eval
+from tabulate import tabulate
 from file_path import *
 import json
 import z3
@@ -154,7 +155,36 @@ class Solve():
 
 		common_position_constraint = z3.And(equality_constraint)
 
-		return common_position_constraint	
+		return common_position_constraint
+
+	def apply_constraints(self):
+		solver = z3.Solver()
+		solver.add(self.make_guess_constraint())
+		solver.add(self.common_position_constraint())
+		solver.check()
+		
+		return solver.model()
+
+	def solution(self):
+		solved = self.apply_constraints()
+		solved_keys = [index.name() for index in solved]
+		matrix, start_positions, max_val = self.get_matrix()
+
+		for x_index in range(max_val):
+			for y_index in range(max_val):
+				if isinstance(matrix[x_index][y_index], tuple):
+					matrix_val = matrix[x_index][y_index][0]
+				elif matrix[x_index][y_index] != None:
+					matrix_val = matrix[x_index][y_index]
+				else:
+					continue
+
+				no = solved[matrix_val]
+				ch = chr(no.as_long())
+				matrix[x_index][y_index] = ch
+
+		return matrix
 
 if __name__ == '__main__':
-	pass
+	solve = Solve()
+	print(tabulate(solve.solution()))
