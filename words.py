@@ -235,6 +235,13 @@ class Words():
 				clues[key] += [word[0] for word in sentence_solved[key]]
 				clues[key] += wikipedia_solved[key]
 
+		for key in list(wikipedia_solved.keys()):
+			try:
+				clues[key] += wikipedia_solved[key]
+			except:
+				clues[key] = list()
+				clues[key] += wikipedia_solved[key]		
+
 		print(">>> STORED CLUES.....")
 		with open(CLUES_PATH, "w") as fp:
 			json.dump(str(clues), fp)
