@@ -236,7 +236,7 @@ class Words():
 				clues[key] += wikipedia_solved[key]
 
 		print(">>> STORED CLUES.....")
-		with open(STORE_CLUES_PATH, "w") as fp:
+		with open(CLUES_PATH, "w") as fp:
 			json.dump(str(clues), fp)
 
 	def fetch_words(self, clues):
