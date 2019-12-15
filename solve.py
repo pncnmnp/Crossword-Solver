@@ -97,7 +97,6 @@ class Solve():
 		clues = self.convert_clues_code()
 		matrix, start_positions, max_val = self.get_matrix()
 
-		solver = z3.Solver()
 		clue_constraint = list()
 
 		for x_index in range(max_val):
@@ -138,6 +137,24 @@ class Solve():
 		clues_constraint = z3.And(clue_constraint)
 
 		return clues_constraint
+
+	def common_position_constraint(self):
+		clues = self.convert_clues_code()
+		matrix, start_positions, max_val = self.get_matrix()
+
+		equality_constraint = list()
+
+		for x_index in range(max_val):
+			for y_index in range(max_val):
+				if isinstance(matrix[x_index][y_index], tuple):
+					first = matrix[x_index][y_index][0]
+					second = matrix[x_index][y_index][1]
+
+					equality_constraint.append(z3.And(first == second))
+
+		common_position_constraint = z3.And(equality_constraint)
+
+		return common_position_constraint	
 
 if __name__ == '__main__':
 	pass
