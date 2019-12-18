@@ -10,17 +10,20 @@ NOTE: No length-verification is required in Solve(),
 """
 
 # Pattern is (initial_X, initial_Y), direction(D or A), length
+# "": {"start":(), "direction":"", "length": },
 GRID = {
-	"A type of cheese": {"start":(0, 7), "direction":"D", "length": 4},
-	"Indian Grandmaster": {"start":(0, 11), "direction":"D", "length": 5},
-	"A small european singing bird": {"start":(1, 7), "direction":"A", "length": 5},
-	"A plant of the cabbage species": {"start":(2, 3), "direction":"D", "length": 8},
-	"Director of Raging Bull": {"start":(3, 0), "direction":"A", "length": 8},
-	"Fireplace": {"start":(5, 3), "direction":"A", "length": 7},
-	"A popular game character created by Shigeru Miyamoto": {"start":(5, 6), "direction":"D", "length": 5},
-	"Author who created Sherlock Holmes": {"start":(7, 8), "direction":"D", "length": 5},
-	"The science of life": {"start":(9, 2), "direction":"A", "length": 7},
-	"Used for baking or roasting": {"start":(11, 6), "direction":"A", "length": 4}
+	"__ of bad news": {"start":(0, 1), "direction":"D", "length": 6},
+	"Posture problem": {"start":(0, 3), "direction":"D", "length": 5},
+	"Loads": {"start":(0, 4), "direction":"D", "length": 6},
+	"Laundry appliance": {"start":(0, 5), "direction":"D", "length": 5},
+	"Lectured": {"start":(1, 0), "direction":"D", "length": 5},
+	"One who weeps": {"start":(1, 2), "direction":"D", "length": 5},
+	"Grassy clump": {"start":(0, 3), "direction":"A", "length": 3},
+	"Pie chart portion": {"start":(1, 0), "direction":"A", "length": 6},
+	"\"Scary Movie,\" e.g.": {"start":(2, 0), "direction":"A", "length": 6},
+	"Maryland's state bird": {"start":(3, 0), "direction":"A", "length": 6},
+	"Something worth saving": {"start":(4, 0), "direction":"A", "length": 6},
+	"\"To __ is human\"": {"start":(5, 0), "direction":"A", "length": 3}
 }
 
 class Solve():
