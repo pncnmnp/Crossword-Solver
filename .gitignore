@@ -1,0 +1,4 @@
+/crossword
+/__pycache__
+/corpus/all-clues
+/corpus/all_word_vectors.pickle
