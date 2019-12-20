@@ -1,6 +1,6 @@
 # Crossword-Solver
 <p align="center">
-![Image of a crossword puzzle](https://github.com/pncnmnp/Crossword-Solver/blob/master/screenshots/newspaper.jpg)
+<img src="https://github.com/pncnmnp/Crossword-Solver/blob/master/screenshots/newspaper.jpg">
 </p>
 
 This solver guesses the probable solutions based on the clues provided and uses a SMT solver to predict the result
