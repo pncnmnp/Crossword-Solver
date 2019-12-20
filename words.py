@@ -2,16 +2,14 @@ from nltk.corpus import wordnet as wn
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from ast import literal_eval
-from collections import Counter
 import gensim.downloader as api
 from file_path import *
+from schema import CROSSWORD_GRID
 import pickle
 import string
 import requests
 import inflect # Library used to check whether a sentence is singular or plural
 import json
-import math
-import re
 
 """
 TODO: >> Plural detection and conversion [done]
@@ -158,57 +156,6 @@ class Words():
 
 		return clue_mapping
 
-	def all_solution(self, clues):
-		stop = stopwords.words('english') + [""]
-
-		with open(ALL_CLUES, encoding="latin-1") as fp:
-			dict_guesses = fp.readlines()
-
-		clue_mapping = dict()
-		all_lengths = []
-		for clue in clues:
-			clue_mapping[clue] = list()
-			if clues[clue] not in all_lengths:
-				all_lengths.append(clues[clue])
-
-		clue_statements = list(clues.keys())
-		clue_vecs = dict()
-		for clue in clue_statements:
-			clue_vecs[clue] = [word for word in [word.strip(string.punctuation) for word in clue.lower().split()] if word not in stop]
-
-		print(">>> STARTING ALL CLUES FETCH (V.1).....")
-		for guess in dict_guesses:
-			if len(guess.split()[0]) not in all_lengths:
-				continue
-
-			guess_statement = " ".join(guess.split()[4:])
-			guess_vec = Counter([word for word in [word.strip(string.punctuation) for word in guess_statement.lower().split()] if word not in stop])
-
-			for clue in clue_statements:
-				if len(guess.split()[0]) == clues[clue]:
-					clue_vec = Counter(clue_vecs[clue])
-
-					# https://stackoverflow.com/questions/15173225/calculate-cosine-similarity-given-2-sentence-strings
-					intersection = set(guess_vec.keys()) & set(clue_vec.keys())
-					numerator = sum([guess_vec[x] * clue_vec[x] for x in intersection])
-
-					sum1 = sum([guess_vec[x]**2 for x in guess_vec.keys()])
-					sum2 = sum([clue_vec[x]**2 for x in clue_vec.keys()])
-					denominator = math.sqrt(sum1) * math.sqrt(sum2)
-
-					if not denominator:
-						sim =  0.0
-					else:
-						sim = float(numerator) / denominator
-
-					if sim > 0.65:
-						clue_mapping[clue] += [guess.split()[0].lower()]
-
-		for clue in clues:
-			clue_mapping[clue] = list(set(clue_mapping[clue]))				
-
-		return clue_mapping
-
 	def one_word_solution(self, one_word_clues, clues):
 		fp = open(MOBY_PATH)
 		moby_lines = fp.readlines()
@@ -289,11 +236,9 @@ class Words():
 		for key in list(sentence_solved.keys()):
 			try:
 				clues[key] += [word[0] for word in sentence_solved[key]]
-				clues[key] += wikipedia_solved[key]
 			except:
 				clues[key] = list()
 				clues[key] += [word[0] for word in sentence_solved[key]]
-				clues[key] += wikipedia_solved[key]
 
 		for key in list(wikipedia_solved.keys()):
 			try:
@@ -320,31 +265,31 @@ class Words():
 		    Param: clues - dict
 		           {clue_1: word_len_1, clue_2: word_len_2}
 		"""
-		# all_clues = list(clues.keys())
-		# one_word_clues = [(clue.lower(),clue) for clue in all_clues if len(clue.split(" ")) == 1]
+		all_clues = list(clues.keys())
+		one_word_clues = [(clue.lower(),clue) for clue in all_clues if len(clue.split(" ")) == 1]
 
-		# # converting words such as extra-large into large
-		# one_word_clues += [(clue.split("-")[-1].lower(),clue) for clue in all_clues 
-		# 						if ("-" in clue) and (len(clue.split("-"))) == 2]
-		# one_word_solved = self.one_word_solution_alternate([clue[0] for clue in one_word_clues], clues)
+		# converting words such as extra-large into large
+		one_word_clues += [(clue.split("-")[-1].lower(),clue) for clue in all_clues 
+								if ("-" in clue) and (len(clue.split("-"))) == 2]
+		one_word_solved = self.one_word_solution_alternate([clue[0] for clue in one_word_clues], clues)
 
-		# sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
-		# sentence_solved = self.sentence_solution(sentence_clues, clues)
+		sentence_clues = list(set(all_clues).difference(set(one_word_clues)))
+		sentence_solved = self.sentence_solution(sentence_clues, clues)
 
-		# wikipedia_clues = list()
-		# # Print top N results
-		# N = 40
-		# for clue in sentence_solved:
-		# 	sentence_solved[clue] = sentence_solved[clue][:N]
+		wikipedia_clues = list()
+		# Print top N results
+		N = 40
+		for clue in sentence_solved:
+			sentence_solved[clue] = sentence_solved[clue][:N]
 
-		# wikipedia_solved = self.wikipedia_solution(sentence_clues, clues)
-		all_solved = self.all_solution(clues)
-		print(all_solved)
-		print(">>> STORED CLUES.....")
-		with open(CLUES_PATH, "w") as fp:
-			json.dump(str(all_solved), fp)
+		wikipedia_solved = self.wikipedia_solution(sentence_clues, clues)
+
+		self.store_words(one_word_solved, one_word_clues, sentence_solved, wikipedia_solved)
 
 if __name__ == '__main__':
-	# THE WORDS INSERTED SHOULD HAVE THEIR STARTING LETTER CAPITALIZED
-	# Words().fetch_words({"A type of cheese": 4, "Indian Grandmaster": 5, "A small european singing bird": 5, "A plant of the cabbage species": 8, "Director of Raging Bull": 8, "Fireplace": 7, "A popular game character created by Shigeru Miyamoto": 5, "Author who created Sherlock Holmes": 5, "The science of life": 7, "Used for baking or roasting": 4})
-	Words().fetch_words({"__ of bad news": 6, "Posture problem": 5, "Loads": 6, "Laundry appliance": 5, "Lectured": 5, "One who weeps": 5, "Grassy clump": 3, "Pie chart portion": 6, "\"Scary Movie,\" e.g.": 6, "Maryland's state bird": 6, "Something worth saving": 6, "\"To __ is human\"": 3})
+	grid = CROSSWORD_GRID
+	clues = dict()
+	for clue in CROSSWORD_GRID:
+		clues[clue] = CROSSWORD_GRID[clue]["length"]
+
+	Words().fetch_words(clues)
