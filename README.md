@@ -21,6 +21,8 @@ There is a considerable difference in performance between PyPy and native python
 I have observed certain libraries like `nltk` work flawlessly with PyPy whereas `z3` has some issues.
 Native python (default) works reasonably well with `words.py` and `solve.py`.
 
+**Important**: Decompress the `./corpus/all-clues.bz2` file before running `words_offline.py`
+
 ## Working
 **Here is the format entered in `schema.py`**
 
